@@ -1,0 +1,8 @@
+sendkeys: ["xxx"]
+crontasks:
+  - name: "test"
+    cron: "* */1 * * *"
+    message:
+        title: "test"
+        description: "这是测试"
+        channel: 9
