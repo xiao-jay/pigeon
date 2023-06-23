@@ -8,25 +8,28 @@ import (
 	"github.com/robfig/cron/v3"
 	"log"
 	"net/http"
+	"pigeon/config"
+	"pigeon/pkg/framework"
+	"pigeon/pkg/plugins"
 	"time"
 )
 
-var MsgChan chan Msg
+var MsgChan chan config.Msg
 
 func main() {
 	c := cron.New()
-	config, err := GetConf()
+	Config, err := config.GetConf()
 	if err != nil {
 		panic(err)
 	}
 
-	if err := initcheck(*config); err != nil {
+	if err := initcheck(*Config); err != nil {
 		panic(err)
 	}
-	MsgChan = make(chan Msg, 1000)
-	_, err = c.AddFunc("0 8 * * *", func() {
-		log.Println("开始执行任务")
-		if err := SendMessage(config.SendKeys, MsgChan); err != nil {
+	MsgChan = make(chan config.Msg, 1000)
+	_, err = c.AddFunc(Config.MainCron, func() {
+		log.Println("主程序开始执行任务")
+		if err := SendMessage(Config.SendKeys, MsgChan); err != nil {
 			log.Println(err)
 		}
 	})
@@ -34,7 +37,8 @@ func main() {
 		log.Println(err)
 	}
 
-	for _, crontask := range config.CronTasks {
+	for _, crontask := range Config.CronTasks {
+		log.Println(crontask)
 		_, err = c.AddFunc(crontask.Cron, func() {
 			MsgChan <- crontask.Message
 		})
@@ -42,25 +46,38 @@ func main() {
 			log.Println(err)
 		}
 	}
+
+	plugins.InitPlugin()
+	for pluginName, argument := range Config.Plugins {
+		if pluginBuilder, ok := framework.GetPluginBuilder(pluginName); ok {
+			plugin := pluginBuilder(argument)
+			if err := plugin.Run(MsgChan, *Config, c); err != nil {
+				log.Println(err)
+			}
+		} else {
+			log.Printf("plugin %s not found", pluginName)
+		}
+	}
+
 	c.Start()
 	for {
 		time.Sleep(time.Second)
 	}
 }
 
-func initcheck(config Config) error {
+func initcheck(config config.Config) error {
 	if len(config.SendKeys) == 0 {
 		return errors.New("no sendkey")
 	}
 	return nil
 }
 
-func SendMessage(sendKeys []string, msgChan chan Msg) error {
+func SendMessage(sendKeys []string, msgChan chan config.Msg) error {
 	if len(sendKeys) == 0 {
 		return errors.New("no sendkey")
 	}
 	client := &http.Client{}
-	msgs := make([]Msg, 0)
+	msgs := make([]config.Msg, 0)
 	NoneMsgFlag := false
 	for !NoneMsgFlag {
 		select {

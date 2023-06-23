@@ -1,4 +1,4 @@
-package main
+package config
 
 import (
 	"fmt"
@@ -7,12 +7,12 @@ import (
 	"log"
 )
 
-type Plugin string
-
+type Arguments map[string]interface{}
 type Config struct {
-	CronTasks []CronTask `yaml:"crontasks,omitempty"`
-	SendKeys  []string   `yaml:"sendkeys,omitempty"`
-	//Plugins   []interface{}   `yaml:"plugins"`
+	CronTasks []CronTask           `yaml:"crontasks"`
+	SendKeys  []string             `yaml:"sendkeys"`
+	Plugins   map[string]Arguments `yaml:"plugins"`
+	MainCron  string               `yaml:"maincron"`
 }
 
 type CronTask struct {
@@ -28,7 +28,7 @@ type Msg struct {
 }
 
 func GetConf() (*Config, error) {
-	yamlFile, err := ioutil.ReadFile("config.yaml")
+	yamlFile, err := ioutil.ReadFile("config/config.yaml")
 	if err != nil {
 		fmt.Println(err.Error())
 		return nil, err
