@@ -72,7 +72,7 @@ func (w Weather) Name() string {
 
 func (w Weather) Run(Msg chan config.Msg, config config.Config, c *cron.Cron) error {
 	_, err := c.AddFunc(w.Cron, func() {
-		log.Println("weather 开始执行任务")
+		log.Printf("%s 开始执行任务", Name)
 		wehtherInfo, err := w.GetWeatherInfo()
 		if err != nil {
 			log.Println(err)
@@ -163,7 +163,7 @@ func (w Weather) SendMessage(weatherMsg interface{}, Msg chan config.Msg) error 
 		return err
 	}
 	msg := config.Msg{
-		Title:       "weather",
+		Title:       Name,
 		Description: string(msgjson),
 		Channel:     9,
 	}
