@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"pigeon/config"
+	"pigeon/pkg/framework"
 	"time"
 )
 
@@ -19,6 +20,12 @@ type BondReminder struct {
 	Cron string `json:"cron"`
 }
 
+func New(Arguments config.Arguments) framework.Plugin {
+	log.Println("weather plugin init", Arguments)
+	return &BondReminder{
+		Cron: Arguments["cron"].(string),
+	}
+}
 func (b BondReminder) Name() string {
 	return Name
 }
