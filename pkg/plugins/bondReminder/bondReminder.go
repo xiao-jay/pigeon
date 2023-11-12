@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"pigeon/config"
 	"pigeon/pkg/framework"
+	"strings"
 	"time"
 )
 
@@ -52,7 +53,7 @@ func (b BondReminder) Run(Msg chan config.Msg, config config.Config, c *cron.Cro
 		log.Printf("%s 开始执行任务", Name)
 		bonds := BondParser(BondData())
 		msg := BondFilter(bonds)
-		if len(msg) == 0 {
+		if len(msg) == 0 || strings.Contains(msg, "没有可转债") {
 			log.Printf("今日 %v 无可转债", time.Now())
 			return
 		}
