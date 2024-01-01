@@ -23,7 +23,7 @@ type CronTask struct {
 
 type Msg struct {
 	Title       string `json:"title"`
-	Description string `json:"description"`
+	Description string `json:"desp"`
 	Channel     int    `json:"channel"`
 }
 

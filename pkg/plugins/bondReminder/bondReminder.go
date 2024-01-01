@@ -22,7 +22,7 @@ type BondReminder struct {
 }
 
 func New(Arguments config.Arguments) framework.Plugin {
-	log.Println("weather plugin init", Arguments)
+	log.Println("bond reminder plugin init", Arguments)
 	return &BondReminder{
 		Cron: Arguments["cron"].(string),
 	}
@@ -33,13 +33,10 @@ func (b BondReminder) Name() string {
 
 // SendMessage send msg to channel
 func (b BondReminder) SendMessage(bindMsg interface{}, Msg chan config.Msg) error {
-	msgjson, err := json.Marshal(bindMsg)
-	if err != nil {
-		return err
-	}
+	msgjson := bindMsg.(string)
 	msg := config.Msg{
 		Title:       Name,
-		Description: string(msgjson),
+		Description: msgjson,
 		Channel:     9,
 	}
 
@@ -121,9 +118,8 @@ func BondData() []byte {
 			log.Println("Retry due to network failure")
 			continue
 		}
-		defer resp.Body.Close()
-
 		b, _ := ioutil.ReadAll(resp.Body)
+		resp.Body.Close()
 		return b
 	}
 }
@@ -143,24 +139,27 @@ func BondFilter(data any) string {
 		message string = ""
 		bonds   Bonds
 	)
-	json.Unmarshal(func(data any) []byte {
+	err := json.Unmarshal(func(data any) []byte {
 		b, _ := json.Marshal(data)
 		return b
 	}(data), &bonds)
+	if err != nil {
+		return err.Error()
+	}
 
 	for _, v := range bonds.Result.Data {
 		// 匹配今天
 		if v.Date == time.Now().Format("2006-01-02")+" 00:00:00" {
-			message += "·" + v.Name + "（" + v.Code + " / " + v.Rating + "）\n"
+			message += "·" + v.Name + "（" + v.Code + " / " + v.Rating + "）\n\n"
 		}
-		// 匹配明天
-		if v.Date == time.Now().Add(time.Hour*24).Format("2006-01-02")+" 00:00:00" {
-			message += "·" + v.Name + "（" + v.Code + " / " + v.Rating + " / 预约）\n"
-		}
-		// 匹配后天
-		if v.Date == time.Now().Add(time.Hour*24*2).Format("2006-01-02")+" 00:00:00" {
-			message += "·" + v.Name + "（" + v.Code + " / " + v.Rating + " / 预约）\n"
-		}
+		//// 匹配明天
+		//if v.Date == time.Now().Add(time.Hour*24).Format("2006-01-02")+" 00:00:00" {
+		//	message += "·" + v.Name + "（" + v.Code + " / " + v.Rating + " / 预约）"
+		//}
+		//// 匹配后天
+		//if v.Date == time.Now().Add(time.Hour*24*2).Format("2006-01-02")+" 00:00:00" {
+		//	message += "·" + v.Name + "（" + v.Code + " / " + v.Rating + " / 预约）"
+		//}
 	}
 
 	if len(message) == 0 {

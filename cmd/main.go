@@ -6,17 +6,20 @@ import (
 	"errors"
 	"fmt"
 	"github.com/robfig/cron/v3"
+	"io"
 	"log"
 	"net/http"
 	"pigeon/config"
 	"pigeon/pkg/framework"
 	"pigeon/pkg/plugins"
-	"time"
+	"strconv"
 )
 
 var MsgChan chan config.Msg
 
 func main() {
+	// default print file name and line
+	log.SetFlags(log.Lshortfile)
 	c := cron.New()
 	Config, err := config.GetConf()
 	if err != nil {
@@ -27,10 +30,10 @@ func main() {
 		panic(err)
 	}
 	MsgChan = make(chan config.Msg, 1000)
+	log.Println("主程序开始执行任务")
 	_, err = c.AddFunc(Config.MainCron, func() {
-		log.Println("主程序开始执行任务")
 		if err := SendMessage(Config.SendKeys, MsgChan); err != nil {
-			log.Println(err)
+			log.Println("Error:", err)
 		}
 	})
 	if err != nil {
@@ -39,8 +42,13 @@ func main() {
 
 	for _, crontask := range Config.CronTasks {
 		log.Println(crontask)
-		_, err = c.AddFunc(crontask.Cron, func() {
-			MsgChan <- crontask.Message
+		task := config.CronTask{
+			Name:    crontask.Name,
+			Cron:    crontask.Cron,
+			Message: crontask.Message,
+		}
+		_, err = c.AddFunc(task.Cron, func() {
+			MsgChan <- task.Message
 		})
 		if err != nil {
 			log.Println(err)
@@ -58,11 +66,8 @@ func main() {
 			log.Printf("plugin %s not found", pluginName)
 		}
 	}
-
-	c.Start()
-	for {
-		time.Sleep(time.Second)
-	}
+	log.Printf("have %v cron job ", len(c.Entries()))
+	c.Run()
 }
 
 func initcheck(config config.Config) error {
@@ -76,7 +81,6 @@ func SendMessage(sendKeys []string, msgChan chan config.Msg) error {
 	if len(sendKeys) == 0 {
 		return errors.New("no sendkey")
 	}
-	client := &http.Client{}
 	msgs := make([]config.Msg, 0)
 	NoneMsgFlag := false
 	for !NoneMsgFlag {
@@ -91,13 +95,42 @@ func SendMessage(sendKeys []string, msgChan chan config.Msg) error {
 		log.Println(errors.New("no msg"))
 		return nil
 	}
+	log.Println("send msgs", msgs)
+	// send to all sendkeys people
+	if err := sendMessageThroughFangTang(msgs, sendKeys); err != nil {
+		return err
+	}
+	return nil
+}
 
-	bytesData, _ := json.Marshal(msgs)
+func sendMessageThroughFangTang(msgs []config.Msg, sendKeys []string) error {
 	for _, sendkey := range sendKeys {
-		url := fmt.Sprintf("https://sctapi.ftqq.com/%s.send?title=%v&desp=%v&channel=%v", sendkey, msgs[0].Title, msgs[0].Description, msgs[0].Channel)
-		req, _ := http.NewRequest("GET", url, bytes.NewReader(bytesData))
-		resp, _ := client.Do(req)
-		resp.Body.Close()
+		client := &http.Client{}
+		url := fmt.Sprintf("https://sctapi.ftqq.com/%s.send", sendkey)
+		for _, msg := range msgs {
+			jsondata, err := json.Marshal(msg)
+			if err != nil {
+				return err
+			}
+			req, err := http.NewRequest("POST", url, bytes.NewReader(jsondata))
+			if err != nil {
+				return err
+			}
+			req.Header.Add("Content-Type", "application/json")
+			resp, err := client.Do(req)
+			if err != nil {
+				return err
+			}
+			if resp.StatusCode != 200 {
+				return fmt.Errorf(strconv.Itoa(resp.StatusCode))
+			}
+			defer func(Body io.ReadCloser) {
+				err := Body.Close()
+				if err != nil {
+					log.Println(err)
+				}
+			}(resp.Body)
+		}
 	}
 
 	return nil
