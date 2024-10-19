@@ -96,7 +96,8 @@ func SendMessage(sendKeys []string, msgChan chan config.Msg) error {
 	}
 	log.Println("send msgs", msgs)
 	// send to all sendkeys people
-	if err := channels.SendMessageThroughFangTang(msgs, sendKeys); err != nil {
+	f := channels.FangTang{}
+	if err := f.SendMessage(msgs, sendKeys); err != nil {
 		return err
 	}
 	return nil

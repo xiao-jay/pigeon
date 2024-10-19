@@ -11,8 +11,12 @@ import (
 	"strconv"
 )
 
-func SendMessageThroughFangTang(msgs []config.Msg, sendKeys []string) error {
-	for _, sendkey := range sendKeys {
+type FangTang struct {
+}
+
+func (f FangTang) SendMessage(msgs []config.Msg, sendKeys any) error {
+	sendkeysStringList := sendKeys.([]string)
+	for _, sendkey := range sendkeysStringList {
 		client := &http.Client{}
 		url := fmt.Sprintf("https://sctapi.ftqq.com/%s.send", sendkey)
 		for _, msg := range msgs {

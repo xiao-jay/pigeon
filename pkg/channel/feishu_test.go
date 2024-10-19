@@ -19,8 +19,8 @@ func TestSendMessageFeiShu(t *testing.T) {
 			Channel:     1, // 根据你的需求设置渠道
 		},
 	}
-
-	if err := SendMessageFeiShu(msgs, Config.FeishuWebHooks); err != nil {
+	f := Feishu{}
+	if err := f.SendMessage(msgs, Config.FeishuWebHooks); err != nil {
 		fmt.Printf("Error sending message: %v\n", err)
 	} else {
 		fmt.Println("Message sent successfully!")

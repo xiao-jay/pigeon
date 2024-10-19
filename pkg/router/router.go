@@ -5,11 +5,13 @@ import (
 	"github.com/gin-gonic/gin"
 	"log"
 	"net/http"
+	"pigeon/config"
+	channels "pigeon/pkg/channel"
 )
 
-var validChannelType = map[string]string{
-	"feishu":   "true",
-	"fangtang": "true",
+var validChannelType = map[string]func(msgs []config.Msg, extra any) error{
+	"feishu":   channels.Feishu{}.SendMessage,
+	"fangtang": channels.FangTang{}.SendMessage,
 }
 
 func InitRouter() {

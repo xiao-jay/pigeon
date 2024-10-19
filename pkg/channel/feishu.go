@@ -34,14 +34,17 @@ type FeishuMessage struct {
 	Content Content `json:"content"`
 }
 
-// SendMessageFeiShu 发送消息到飞书
-func SendMessageFeiShu(msgs []config.Msg, webHook_urls []string) error {
+type Feishu struct {
+}
 
-	if len(webHook_urls) == 0 {
+// SendMessage 发送消息到飞书
+func (f Feishu) SendMessage(msgs []config.Msg, extra any) error {
+	webhookUrls := extra.([]string)
+	if len(webhookUrls) == 0 {
 		return fmt.Errorf("webhook urls is nil")
 	}
 
-	for _, webhookURL := range webHook_urls {
+	for _, webhookURL := range webhookUrls {
 
 		// 遍历消息并发送
 		for _, msg := range msgs {
