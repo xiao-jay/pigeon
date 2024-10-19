@@ -44,7 +44,7 @@ func sendMessages(c *gin.Context) {
 	log.Printf("Received message: %s\n\n", json.Message)
 
 	if _, found := validChannelType[json.ChannelType]; !found {
-		c.JSON(http.StatusBadRequest, gin.H{"status": "fial", "message": fmt.Sprintf("not support:%s", json.ChannelType)})
+		c.JSON(http.StatusBadRequest, gin.H{"status": "fail", "message": fmt.Sprintf("not support:%s", json.ChannelType)})
 	}
 	msg := config.Msg{
 		Title:       json.Title,
@@ -54,7 +54,7 @@ func sendMessages(c *gin.Context) {
 	msg_list := append([]config.Msg{}, msg)
 	if json.ChannelType == "feishu" {
 		if err := validChannelType[json.ChannelType](msg_list, config3.FeishuWebHooks); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"status": "fial", "message": fmt.Sprintf("not support:%s", json.ChannelType)})
+			c.JSON(http.StatusBadRequest, gin.H{"status": "fail", "message": fmt.Sprintf("err is :%s", err)})
 		}
 	}
 
