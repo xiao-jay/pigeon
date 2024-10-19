@@ -14,7 +14,10 @@ var validChannelType = map[string]func(msgs []config.Msg, extra any) error{
 	"fangtang": channels.FangTang{}.SendMessage,
 }
 
-func InitRouter() {
+var config3 config.Config
+
+func InitRouter(config2 *config.Config) {
+	config3 = *config2
 	r := gin.New()
 	r.POST("/send_messages", sendMessages)
 	err := r.Run(":7030")
@@ -26,6 +29,7 @@ func InitRouter() {
 // sendMessages handles the POST request for /send_messages
 func sendMessages(c *gin.Context) {
 	var json struct {
+		Title       string `json:"title"`
 		Message     string `json:"message" binding:"required"` // Expecting a message field in the JSON body
 		ChannelType string `json:"channelType"`
 	}
@@ -41,6 +45,17 @@ func sendMessages(c *gin.Context) {
 
 	if _, found := validChannelType[json.ChannelType]; !found {
 		c.JSON(http.StatusBadRequest, gin.H{"status": "fial", "message": fmt.Sprintf("not support:%s", json.ChannelType)})
+	}
+	msg := config.Msg{
+		Title:       json.Title,
+		Description: json.Message,
+		Channel:     0,
+	}
+	msg_list := append([]config.Msg{}, msg)
+	if json.ChannelType == "feishu" {
+		if err := validChannelType[json.ChannelType](msg_list, config3.FeishuWebHooks); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"status": "fial", "message": fmt.Sprintf("not support:%s", json.ChannelType)})
+		}
 	}
 
 	// Respond back to the client

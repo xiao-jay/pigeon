@@ -63,7 +63,7 @@ func main() {
 		}
 	}
 
-	go router.InitRouter()
+	go router.InitRouter(Config)
 	log.Printf("have %v cron job ", len(c.Entries()))
 	c.Run()
 
