@@ -1,4 +1,5 @@
 sendkeys: ["xxx"]
+feishu_webhooks: [""]
 crontasks:
   - name: "test"
     cron: "* */1 * * *"

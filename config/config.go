@@ -9,10 +9,11 @@ import (
 
 type Arguments map[string]interface{}
 type Config struct {
-	CronTasks []CronTask           `yaml:"crontasks"`
-	SendKeys  []string             `yaml:"sendkeys"`
-	Plugins   map[string]Arguments `yaml:"plugins"`
-	MainCron  string               `yaml:"maincron"`
+	CronTasks      []CronTask           `yaml:"crontasks"`
+	SendKeys       []string             `yaml:"sendkeys"`
+	Plugins        map[string]Arguments `yaml:"plugins"`
+	MainCron       string               `yaml:"maincron"`
+	FeishuWebHooks []string             `yaml:"feishu_webhooks"`
 }
 
 type CronTask struct {
@@ -27,8 +28,8 @@ type Msg struct {
 	Channel     int    `json:"channel"`
 }
 
-func GetConf() (*Config, error) {
-	yamlFile, err := ioutil.ReadFile("config/config.yaml")
+func GetConf(confg_file_path string) (*Config, error) {
+	yamlFile, err := ioutil.ReadFile(confg_file_path)
 	if err != nil {
 		fmt.Println(err.Error())
 		return nil, err

@@ -1,18 +1,14 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
 	"errors"
-	"fmt"
 	"github.com/robfig/cron/v3"
-	"io"
 	"log"
-	"net/http"
 	"pigeon/config"
+	"pigeon/pkg/channel"
 	"pigeon/pkg/framework"
 	"pigeon/pkg/plugins"
-	"strconv"
+	"pigeon/pkg/router"
 )
 
 var MsgChan chan config.Msg
@@ -21,7 +17,7 @@ func main() {
 	// default print file name and line
 	log.SetFlags(log.Lshortfile)
 	c := cron.New()
-	Config, err := config.GetConf()
+	Config, err := config.GetConf("config/config.yaml")
 	if err != nil {
 		panic(err)
 	}
@@ -66,8 +62,11 @@ func main() {
 			log.Printf("plugin %s not found", pluginName)
 		}
 	}
+
+	go router.InitRouter()
 	log.Printf("have %v cron job ", len(c.Entries()))
 	c.Run()
+
 }
 
 func initcheck(config config.Config) error {
@@ -97,41 +96,8 @@ func SendMessage(sendKeys []string, msgChan chan config.Msg) error {
 	}
 	log.Println("send msgs", msgs)
 	// send to all sendkeys people
-	if err := sendMessageThroughFangTang(msgs, sendKeys); err != nil {
+	if err := channels.SendMessageThroughFangTang(msgs, sendKeys); err != nil {
 		return err
 	}
-	return nil
-}
-
-func sendMessageThroughFangTang(msgs []config.Msg, sendKeys []string) error {
-	for _, sendkey := range sendKeys {
-		client := &http.Client{}
-		url := fmt.Sprintf("https://sctapi.ftqq.com/%s.send", sendkey)
-		for _, msg := range msgs {
-			jsondata, err := json.Marshal(msg)
-			if err != nil {
-				return err
-			}
-			req, err := http.NewRequest("POST", url, bytes.NewReader(jsondata))
-			if err != nil {
-				return err
-			}
-			req.Header.Add("Content-Type", "application/json")
-			resp, err := client.Do(req)
-			if err != nil {
-				return err
-			}
-			if resp.StatusCode != 200 {
-				return fmt.Errorf(strconv.Itoa(resp.StatusCode))
-			}
-			defer func(Body io.ReadCloser) {
-				err := Body.Close()
-				if err != nil {
-					log.Println(err)
-				}
-			}(resp.Body)
-		}
-	}
-
 	return nil
 }
