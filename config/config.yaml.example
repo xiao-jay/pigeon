@@ -9,7 +9,6 @@ crontasks:
         channel: 9
 
 plugins:
-
   bond-reminder:
     cron: "0 8 * * *"
   taopiaopiao:
