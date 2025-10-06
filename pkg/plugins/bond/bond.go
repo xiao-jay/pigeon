@@ -79,6 +79,10 @@ func (sm StockMonitor) Run(Msg chan config.Msg, config config.Config, c *cron.Cr
 	_, err := c.AddFunc(sm.Cron, func() {
 		log.Printf("%s 开始执行任务", Name)
 		msg := sm.CheckAlerts()
+		if msg == "" {
+			log.Println("no need bond remainder")
+			return
+		}
 		if err := sm.SendMessage(msg, Msg); err != nil {
 			log.Println(err)
 		}
