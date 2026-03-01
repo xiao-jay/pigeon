@@ -115,6 +115,8 @@ func (sm *StockMonitor) GetStockPrice(stockCode string) (*StockData, error) {
 	var code string
 	if strings.HasPrefix(stockCode, "6") {
 		code = "sh" + stockCode
+	} else if strings.HasPrefix(stockCode, "hk") {
+		code = stockCode
 	} else {
 		code = "sz" + stockCode
 	}
