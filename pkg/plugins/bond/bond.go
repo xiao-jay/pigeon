@@ -195,7 +195,7 @@ func (sm *StockMonitor) CheckAlerts() string {
 			log.Printf("❌ 获取 %s(%s) 价格失败: %v\n", stockInfo.Name, stockCode, err)
 			continue
 		}
-
+		stockData.Name = stockInfo.Name
 		log.Printf("   %s(%s): %.2f元\n", stockData.Name, stockCode, stockData.Price)
 
 		// 检查是否达到提醒条件
