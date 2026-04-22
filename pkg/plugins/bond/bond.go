@@ -1,4 +1,4 @@
-package bond
+package main
 
 import (
 	"fmt"
@@ -113,7 +113,7 @@ func (sm *StockMonitor) AddStockAlert(stockCode string, alertPrice float64, stoc
 func (sm *StockMonitor) GetStockPrice(stockCode string) (*StockData, error) {
 	// 构造股票代码
 	var code string
-	if strings.HasPrefix(stockCode, "6") {
+	if strings.HasPrefix(stockCode, "6") || strings.HasPrefix(stockCode, "5") {
 		code = "sh" + stockCode
 	} else if strings.HasPrefix(stockCode, "hk") {
 		code = stockCode
@@ -250,9 +250,10 @@ func main() {
 	// 添加要监控的股票
 	// 参数：股票代码, 提醒价格, 股票名称
 	monitor.AddStockAlert("000001", 100.5, "平安银行")
-	monitor.AddStockAlert("600036", 300.0, "招商银行")
-	monitor.AddStockAlert("000858", 150.0, "五粮液")
-	monitor.AddStockAlert("600519", 16000.0, "贵州茅台")
+	monitor.AddStockAlert("513050", 111, "中概互联网")
+	// monitor.AddStockAlert("600036", 300.0, "招商银行")
+	// monitor.AddStockAlert("000858", 150.0, "五粮液")
+	// monitor.AddStockAlert("600519", 16000.0, "贵州茅台")
 
 	// 开始监控，每30秒检查一次
 	monitor.StartMonitoring(2 * time.Second)
