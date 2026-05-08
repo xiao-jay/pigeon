@@ -251,9 +251,9 @@ func main() {
 	// 参数：股票代码, 提醒价格, 股票名称
 	monitor.AddStockAlert("000001", 100.5, "平安银行")
 	monitor.AddStockAlert("513050", 111, "中概互联网")
-	// monitor.AddStockAlert("600036", 300.0, "招商银行")
-	// monitor.AddStockAlert("000858", 150.0, "五粮液")
-	// monitor.AddStockAlert("600519", 16000.0, "贵州茅台")
+	monitor.AddStockAlert("600036", 300.0, "招商银行")
+	monitor.AddStockAlert("000858", 150.0, "五粮液")
+	monitor.AddStockAlert("600519", 16000.0, "贵州茅台")
 
 	// 开始监控，每30秒检查一次
 	monitor.StartMonitoring(2 * time.Second)
