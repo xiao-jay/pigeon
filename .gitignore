@@ -21,3 +21,5 @@
 *benchmark*
 config.yaml
 main
+go.mod
+go.sum
