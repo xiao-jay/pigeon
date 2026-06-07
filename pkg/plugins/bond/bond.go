@@ -27,6 +27,7 @@ type StockMonitor struct {
 type StockInfo struct {
 	Name       string
 	AlertPrice float64
+	BuyReason  string
 }
 
 // StockData 实时股票数据
@@ -49,10 +50,14 @@ func New(arguments config.Arguments) framework.Plugin {
 		bond := bondItem.(map[interface{}]interface{})
 		code := bond["code"].(string)
 
-		sm.stocks[code] = &StockInfo{
+		stockInfo := &StockInfo{
 			Name:       bond["name"].(string),
 			AlertPrice: bond["price"].(float64),
 		}
+		if reason, ok := bond["reason"]; ok {
+			stockInfo.BuyReason = reason.(string)
+		}
+		sm.stocks[code] = stockInfo
 	}
 
 	return sm
@@ -200,7 +205,7 @@ func (sm *StockMonitor) CheckAlerts() string {
 
 		// 检查是否达到提醒条件
 		if stockData.Price <= stockInfo.AlertPrice {
-			msgs += sm.sendAlert(stockData, stockCode, stockInfo.AlertPrice) + "\n\n"
+			msgs += sm.sendAlert(stockData, stockCode, stockInfo.AlertPrice, stockInfo.BuyReason) + "\n\n"
 		}
 
 		// 避免请求过于频繁
@@ -210,16 +215,19 @@ func (sm *StockMonitor) CheckAlerts() string {
 }
 
 // sendAlert 发送提醒
-func (sm *StockMonitor) sendAlert(stockData *StockData, stockCode string, alertPrice float64) string {
-	// priceStr := fmt.Sprintf("%.2f", stockData.Price)
-	// alertPriceStr := fmt.Sprintf("%.2f", alertPrice)
-	// msg := strings.Repeat("=", 50) + "\n\n" + "🚨 股票: " + stockData.Name + "(" + stockCode + ")" + "\n\n" + "🚨 当前价格:" + string(priceStr) + "\n\n" + "🚨 已低于设定价格: " + string(alertPriceStr) + "\n\n" + strings.Repeat("=", 50)
+func (sm *StockMonitor) sendAlert(stockData *StockData, stockCode string, alertPrice float64, buyReason string) string {
+	reasonBlock := ""
+	if buyReason != "" {
+		reasonBlock = fmt.Sprintf("\n\n📝 买入理由: %s", buyReason)
+	}
+
 	msg := fmt.Sprintf(
-		"🚨%s🚨\n\n🚨 股票价格提醒!\n\n🚨 股票: %s(%s)\n\n🚨 当前价格: %.2f元\n\n🚨 已低于设定价格: %.2f元\n\n🚨 时间: %s\n\n🚨%s🚨",
+		"🚨%s🚨\n\n🚨 股票价格提醒!\n\n🚨 股票: %s(%s)\n\n🚨 当前价格: %.2f元\n\n🚨 已低于设定价格: %.2f元%s\n\n🚨 时间: %s\n\n🚨%s🚨",
 		strings.Repeat("=", 50),
 		stockData.Name, stockCode,
 		stockData.Price,
 		alertPrice,
+		reasonBlock,
 		stockData.Time,
 		strings.Repeat("=", 50),
 	)
