@@ -50,9 +50,15 @@ func New(arguments config.Arguments) framework.Plugin {
 		bond := bondItem.(map[interface{}]interface{})
 		code := bond["code"].(string)
 
+		price, err := toFloat64(bond["price"])
+		if err != nil {
+			log.Printf("跳过 %s(%v)，价格解析失败: %v", code, bond["name"], err)
+			continue
+		}
+
 		stockInfo := &StockInfo{
 			Name:       bond["name"].(string),
-			AlertPrice: bond["price"].(float64),
+			AlertPrice: price,
 		}
 		if reason, ok := bond["reason"]; ok {
 			stockInfo.BuyReason = reason.(string)
@@ -61,6 +67,30 @@ func New(arguments config.Arguments) framework.Plugin {
 	}
 
 	return sm
+}
+
+// toFloat64 兼容 yaml 把 price 解析成 int / float / string 的各种情况
+func toFloat64(v interface{}) (float64, error) {
+	switch n := v.(type) {
+	case float64:
+		return n, nil
+	case float32:
+		return float64(n), nil
+	case int:
+		return float64(n), nil
+	case int64:
+		return float64(n), nil
+	case uint64:
+		return float64(n), nil
+	case string:
+		f, err := strconv.ParseFloat(strings.TrimSpace(n), 64)
+		if err != nil {
+			return 0, fmt.Errorf("无法把 %q 转成数字", n)
+		}
+		return f, nil
+	default:
+		return 0, fmt.Errorf("不支持的价格类型 %T", v)
+	}
 }
 
 func (sm StockMonitor) Name() string {

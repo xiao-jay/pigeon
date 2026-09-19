@@ -2,8 +2,12 @@ package bond
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
+
+	"pigeon/config"
 )
 
 func TestGetStockPrice(t *testing.T) {
@@ -82,4 +86,118 @@ func TestGetStockPrice(t *testing.T) {
 
 	fmt.Println("========================================")
 	fmt.Println("测试完成")
+}
+
+// TestToFloat64 覆盖 yaml 把 price 解析成各种类型的情况
+func TestToFloat64(t *testing.T) {
+	cases := []struct {
+		name    string
+		input   interface{}
+		want    float64
+		wantErr bool
+	}{
+		{name: "int", input: 5, want: 5},
+		{name: "int 零", input: 0, want: 0},
+		{name: "int64", input: int64(5), want: 5},
+		{name: "uint64", input: uint64(5), want: 5},
+		{name: "float64", input: 5.28, want: 5.28},
+		{name: "float64 整数值", input: 1250.0, want: 1250},
+		{name: "float32", input: float32(4.5), want: 4.5},
+		{name: "string", input: "12.189", want: 12.189},
+		{name: "string 带空格", input: " 6.15 ", want: 6.15},
+		{name: "string 非数字", input: "abc", wantErr: true},
+		{name: "bool", input: true, wantErr: true},
+		{name: "nil", input: nil, wantErr: true},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got, err := toFloat64(c.input)
+			if c.wantErr {
+				if err == nil {
+					t.Fatalf("toFloat64(%#v) 期望报错，实际返回 %v", c.input, got)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("toFloat64(%#v) 意外报错: %v", c.input, err)
+			}
+			if got != c.want {
+				t.Fatalf("toFloat64(%#v) = %v, 期望 %v", c.input, got, c.want)
+			}
+		})
+	}
+}
+
+// TestNewWithIntPrice 回归测试：config.yaml 里 price 写成整数（如 price: 5）不能报错
+func TestNewWithIntPrice(t *testing.T) {
+	yamlContent := `
+plugins:
+  bond:
+    cron: "0 10 * * 1-5"
+    bonds:
+      - code: "600519"
+        name: "贵州茅台"
+        price: 5
+      - code: "000858"
+        name: "五粮液"
+        price: 68.0
+      - code: "600398"
+        name: "海澜之家"
+        price: "5.28"
+        reason: "低估"
+      - code: "000001"
+        name: "坏数据"
+        price: "不是数字"
+      - code: "000002"
+        name: "缺价格"
+`
+
+	yamlPath := filepath.Join(t.TempDir(), "config.yaml")
+	if err := os.WriteFile(yamlPath, []byte(yamlContent), 0644); err != nil {
+		t.Fatalf("写入临时配置失败: %v", err)
+	}
+
+	conf, err := config.GetConf(yamlPath)
+	if err != nil {
+		t.Fatalf("加载配置失败: %v", err)
+	}
+
+	arguments, ok := conf.Plugins["bond"]
+	if !ok {
+		t.Fatal("配置里没找到 bond 插件")
+	}
+
+	// price 是 int / float / string 时都应该能正常构建，不能 panic
+	monitor := New(arguments).(*StockMonitor)
+
+	want := map[string]float64{
+		"600519": 5,
+		"000858": 68.0,
+		"600398": 5.28,
+	}
+	for code, wantPrice := range want {
+		stock, ok := monitor.stocks[code]
+		if !ok {
+			t.Errorf("%s 没有被加载", code)
+			continue
+		}
+		if stock.AlertPrice != wantPrice {
+			t.Errorf("%s 的 AlertPrice = %v, 期望 %v", code, stock.AlertPrice, wantPrice)
+		}
+	}
+
+	if stock := monitor.stocks["000858"]; stock.Name != "五粮液" {
+		t.Errorf("000858 的 Name = %q, 期望 %q", stock.Name, "五粮液")
+	}
+	if stock := monitor.stocks["600398"]; stock.BuyReason != "低估" {
+		t.Errorf("600398 的 BuyReason = %q, 期望 %q", stock.BuyReason, "低估")
+	}
+
+	// 价格非法或缺失的条目应被跳过，而不是让整个插件挂掉
+	for _, code := range []string{"000001", "000002"} {
+		if _, ok := monitor.stocks[code]; ok {
+			t.Errorf("%s 价格非法/缺失，应该被跳过", code)
+		}
+	}
 }

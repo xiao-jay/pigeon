@@ -8,7 +8,6 @@ import (
 	"log"
 	"net/http"
 	"pigeon/config"
-	"strconv"
 )
 
 type FangTang struct {
@@ -34,7 +33,7 @@ func (f FangTang) SendMessage(msgs []config.Msg, sendKeys any) error {
 				return err
 			}
 			if resp.StatusCode != 200 {
-				return fmt.Errorf(strconv.Itoa(resp.StatusCode))
+				return fmt.Errorf("发送消息失败，HTTP 状态码: %d", resp.StatusCode)
 			}
 			defer func(Body io.ReadCloser) {
 				err := Body.Close()

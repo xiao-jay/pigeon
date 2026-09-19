@@ -3,6 +3,7 @@ package weibo_hot
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 )
 
@@ -16,23 +17,38 @@ type DataItem struct {
 }
 
 func GetData() []DataItem {
-	var data []DataItem
-
 	response, err := http.Get("https://weibo.com/ajax/side/hotSearch")
 	if err != nil {
 		fmt.Println(err)
-		return data
+		return nil
 	}
 	defer response.Body.Close()
 
+	return parseHotSearch(response.Body)
+}
+
+// parseHotSearch 解析微博热搜接口返回的 JSON，数据格式异常时返回空列表而不是 panic
+func parseHotSearch(r io.Reader) []DataItem {
+	var data []DataItem
+
 	var result map[string]interface{}
-	err = json.NewDecoder(response.Body).Decode(&result)
-	if err != nil {
+	if err := json.NewDecoder(r).Decode(&result); err != nil {
 		fmt.Println(err)
 		return data
 	}
 
-	dataJSON := result["data"].(map[string]interface{})["realtime"].([]interface{})
+	dataField, ok := result["data"].(map[string]interface{})
+	if !ok {
+		fmt.Printf("微博热搜返回数据异常，缺少 data 字段: %v\n", result)
+		return data
+	}
+
+	dataJSON, ok := dataField["realtime"].([]interface{})
+	if !ok {
+		fmt.Printf("微博热搜返回数据异常，缺少 realtime 字段: %v\n", dataField)
+		return data
+	}
+
 	jyzy := map[string]string{
 		"电影": "影",
 		"剧集": "剧",
@@ -42,7 +58,10 @@ func GetData() []DataItem {
 
 	for _, dataItem := range dataJSON {
 		hot := ""
-		dataMap := dataItem.(map[string]interface{})
+		dataMap, ok := dataItem.(map[string]interface{})
+		if !ok {
+			continue
+		}
 
 		// 如果是广告，则不添加
 		if _, ok := dataMap["is_ad"]; ok {
@@ -50,8 +69,10 @@ func GetData() []DataItem {
 		}
 
 		if flagDesc, ok := dataMap["flag_desc"]; ok {
-			if hotValue, ok := jyzy[flagDesc.(string)]; ok {
-				hot = hotValue
+			if flagDescStr, ok := flagDesc.(string); ok {
+				if hotValue, ok := jyzy[flagDescStr]; ok {
+					hot = hotValue
+				}
 			}
 		}
 		if _, ok := dataMap["is_boom"]; ok {
@@ -67,10 +88,14 @@ func GetData() []DataItem {
 			hot = "新"
 		}
 
+		note, _ := dataMap["note"].(string)
+		word, _ := dataMap["word"].(string)
+		num, _ := dataMap["num"].(float64)
+
 		dic := DataItem{
-			Title: dataMap["note"].(string),
-			URL:   "https://s.weibo.com/weibo?q=%23" + dataMap["word"].(string) + "%23",
-			Num:   int(dataMap["num"].(float64)),
+			Title: note,
+			URL:   "https://s.weibo.com/weibo?q=%23" + word + "%23",
+			Num:   int(num),
 			Hot:   hot,
 		}
 		data = append(data, dic)
