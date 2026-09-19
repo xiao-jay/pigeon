@@ -197,7 +197,9 @@ func (sm *StockMonitor) CheckAlerts() string {
 	for stockCode, stockInfo := range sm.stocks {
 		stockData, err := sm.GetStockPrice(stockCode)
 		if err != nil {
-			log.Printf("❌ 获取 %s(%s) 价格失败: %v\n", stockInfo.Name, stockCode, err)
+			msg := fmt.Sprintf("❌ 获取 %s(%s) 价格失败: %v", stockInfo.Name, stockCode, err)
+			log.Println(msg)
+			msgs += msg + "\n"
 			continue
 		}
 		stockData.Name = stockInfo.Name
